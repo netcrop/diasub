@@ -31,7 +31,8 @@ diasub.substitute()
 
 diasub.reconfig()
 {
-    local help='[dictionary file][source srt file][target *.cn|en link file: will be created]'
+    local help='[dictionary file][source srt file] \
+    [target *.cn|en link file: will be created]'
     local dict=\${1:?\$help}
     local source=\${2:?\$help}
     local target=\${3:?\$help}

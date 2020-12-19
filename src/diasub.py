@@ -33,23 +33,38 @@ class Diasub:
         self.debugging = DEBUGGING
         self.allcodec = {'ISO-8859':'iso-8859-1','UTF-8':'utf-8'}
         self.operator = {'+':operator.add, '-':operator.sub}
-        self.scriptinfo = """
-        [Script Info]
+        self.scriptinfo = """[Script Info]
         ; Script by Diasub
+        ScriptType: v4.00+
+        WrapStyle: 0
+        ScaledBorderAndShadow: yes
+        YCbCr Matrix: None
         [V4+ Styles]
-        Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, 
-        OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, 
-        ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, 
-        Alignment, MarginL, MarginR, MarginV, Encoding
-        Style: Default,Arial,22,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,1,2,20,20,3,1
-
+        Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+        Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
         [Events]
-        Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-        """
+        Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"""
+        self.predialogue = 'Dialogue: 0,'
+        self.postdialogue = ',Default,,0,0,0,,'
 
     def ass(self):
         self.debug()
-        print(self.scriptinfo.lstrip())
+        if self.argc < 3: self.usage(self.args[1])
+        if self.argc >= 3: sourcefile = self.args[2]
+        content = []
+        with open(sourcefile,'rb') as fh:
+            self.fsource = fh.read()
+        self.fsource = self.fsource.replace(b'\r',b'').decode(\
+        self.codec(infile=sourcefile)).strip('\n').split('\n\n')
+        print(self.scriptinfo.replace('    ',''))
+        for i in self.fsource:
+            i = i.replace('-->','\n')
+            content = i.split('\n')
+            print(self.predialogue + \
+            content[1].replace(',','.').strip(' ').removeprefix('0').removesuffix('0') \
+            + ',' + \
+            content[2].replace(',','.').strip(' ').removeprefix('0').removesuffix('0') + \
+            self.postdialogue + ''.join(content[3:len(content)]))
 
     def codec(self,infile='misc/source'):
         self.debug()
@@ -195,8 +210,10 @@ class Diasub:
             ':' + str(len(self.fsource)) + ' ' + targetfile +\
             ':' + str(len(self.ftarget)))
             return 1
+        # Differs on output language.
+        delimiter = ''
         for i in range(len(self.content)):
-            self.data = ''.join(self.ftarget[i].split()[1:])
+            self.data = delimiter.join(self.ftarget[i].split()[1:])
             self.content[i] = self.fsep.join(self.content[i].split(self.fsep)[:2])
             self.content[i] += self.fsep + re.sub('654\d\d\d',self.lookup,self.data)
         for i in self.content:
