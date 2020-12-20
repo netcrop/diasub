@@ -60,6 +60,7 @@ class Diasub:
         for i in self.fsource:
             i = i.replace('-->','\n')
             content = i.split('\n')
+            if len(content) < 4: continue
             print(self.predialogue + \
             content[1].replace(',','.').strip(' ').removeprefix('0').removesuffix('0') \
             + ',' + \
@@ -173,6 +174,52 @@ class Diasub:
         else: return i
 
     def posttranslate(self):
+        self.debug()
+        if self.argc < 5: self.usage(self.args[1])
+        if self.argc >= 3: sourcefile = self.args[2]
+        if self.argc >= 4: dicfile = self.args[3]
+        if self.argc >= 5: targetfile = self.args[4]
+        self.dic = {}
+        self.content = []
+        with open(sourcefile,'rb') as fh:
+            self.fsource = fh.read()
+        self.fsource = self.fsource.replace(b'\r',b'').decode(\
+        self.codec(infile=sourcefile)).strip('\n').split('\n\n')
+        for i in self.fsource:
+            length = len(i.split('\n'))
+            if length < 3:
+                print('missing content: ' + sourcefile + ':'\
+                + i,file=sys.stderr)
+                return 1
+            data = i.split('\n',2)
+            self.content.append( data[0] + self.fsep + data[1])
+        with open(dicfile,'rb') as fh:
+            self.fdic = fh.read()
+        self.fdic = self.fdic.replace(b'\r',b'').decode(\
+        self.codec(infile=dicfile)).strip('\n').split('\n')
+        for i in self.fdic:
+            if re.match('^#',i):continue
+            self.dic[str(self.dicindex)] = i.split(':')[2]
+            self.dicindex += 1
+        with open(targetfile,'rb') as fh:
+            self.ftarget = fh.read()
+        self.ftarget = self.ftarget.replace(b'\r',b'').decode(\
+        self.codec(infile=dicfile)).strip('\n').replace('}','} ').split('\n')
+        if len(self.content) != len(self.ftarget):
+            self.debug(info='diff length in:' + sourcefile +\
+            ':' + str(len(self.fsource)) + ' ' + targetfile +\
+            ':' + str(len(self.ftarget)))
+            return 1
+        for i in range(len(self.content)):
+            self.data = re.sub('{.*} *','',self.ftarget[i],1)
+            self.content[i] = self.fsep.join(self.content[i].split(self.fsep)[:2])
+            self.content[i] += self.fsep + re.sub('654\d\d\d',self.lookup,self.data)
+        for i in self.content:
+            for j in i.split(self.fsep):
+                print(j)
+            print()
+
+    def pposttranslate(self):
         self.debug()
         if self.argc < 5: self.usage(self.args[1])
         if self.argc >= 3: sourcefile = self.args[2]
