@@ -10,6 +10,7 @@ class Diasub:
         @[target language file after translation]\
         @Create translated subrip text file',
         '-ass':'[subrip text file/srt] convert srt to ass',
+        '-srt':'[ass file] convert ass to srt',
         '-shift':'[subrip text file/srt] [time shift e.g: 00:01:12,123,-]\
         @Shift time forward/backward' }
         self.argv = argv
@@ -17,7 +18,7 @@ class Diasub:
         self.argc = len(self.args)
         if self.argc == 1: self.usage()
         self.option = { '-h':self.usage ,'-o':self.pretranslate,'-i':self.posttranslate,
-        '-ass':self.ass, '-codec':self.codec, '-time':self.timing,
+        '-ass':self.ass, '-srt':self.srt, '-codec':self.codec, '-time':self.timing,
         '-shift':self.timeshift }
         self.fsep = '\n'
         self.keytype = 'rsa'
@@ -47,6 +48,25 @@ class Diasub:
         self.predialogue = 'Dialogue: 0,'
         self.postdialogue = ',Default,,0,0,0,,'
 
+    def srt(self):
+        self.debug()
+        if self.argc < 3: self.usage(self.args[1])
+        if self.argc >= 3: sourcefile = self.args[2]
+        content = []
+        with open(sourcefile,'rb') as fh:
+            self.fsource = fh.read()
+        self.fsource = self.fsource.replace(b'\r',b'').decode(\
+        self.codec(infile=sourcefile)).strip('\n').split('\n')
+        index = 0
+        for i in self.fsource:
+            if not re.match('^Dialogue:.*',i):continue
+            content = i.split(',')
+            index = index + 1
+            print(index)
+            print(''.join('0' + content[1] + '0' + ' --> '+ '0' + content[1] + '0'))
+            print(''.join(content[9:]))
+            print()
+     
     def ass(self):
         self.debug()
         if self.argc < 3: self.usage(self.args[1])
