@@ -63,7 +63,7 @@ class Diasub:
             content = i.split(',')
             index = index + 1
             print(index)
-            print(''.join('0' + content[1] + '0' + ' --> '+ '0' + content[1] + '0'))
+            print(''.join('0' + content[1] + '0' + ' --> '+ '0' + content[2] + '0'))
             print(''.join(content[9:]))
             print()
      
