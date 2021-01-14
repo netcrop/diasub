@@ -3,22 +3,32 @@ import re,tempfile,resource,glob,io,subprocess,sys
 import os,socket,getpass,random,datetime,string,operator
 class Diasub:
     def __init__(self,*argv):
-        self.message = {'-h':' print this help message.',
-        '-o':' [subrip text file] [dictionary file]\
-        @Filter out original language before translation',
-        '-i':' [subrip text file] [dictionary file]\
+        self.message = {'-h':'\
+        @Print this help message.\n',
+        '--srt-pre-translate':' [subrip text file] [dictionary file]\
+        @Filter out original language before translation\n',
+        '--srt-post-translate':' [subrip text file] [dictionary file]\
         @[target language file after translation]\
-        @Create translated subrip text file',
-        '-ass':'[subrip text file/srt] convert srt to ass',
-        '-srt':'[ass file] convert ass to srt',
+        @Create translated subrip text file\n',
+        '--srt-ass':'[subrip text file/srt]\
+        @Convert srt to ass\n',
+        '--ass-srt':'[ass file]\
+        @Convert ass to srt\n',
         '-shift':'[subrip text file/srt] [time shift e.g: 00:01:12,123,-]\
-        @Shift time forward/backward' }
+        @Shift time forward/backward\n',
+        '--vtt-srt':'[vtt file]\
+        @Convert webvtt file to srt\n' }
         self.argv = argv
         self.args = argv[0]
         self.argc = len(self.args)
         if self.argc == 1: self.usage()
-        self.option = { '-h':self.usage ,'-o':self.pretranslate,'-i':self.posttranslate,
-        '-ass':self.ass, '-srt':self.srt, '-codec':self.codec, '-time':self.timing,
+        self.option = { '-h':self.usage ,
+        '--srt-pre-translate':self.pretranslate,
+        '--srt-post-translate':self.posttranslate,
+        '--srt-ass':self.srt_ass,
+        '--ass-srt':self.ass_srt,
+        '--vtt-srt':self.vtt_srt,
+        '-codec':self.codec, '-time':self.timing,
         '-shift':self.timeshift }
         self.fsep = '\n'
         self.keytype = 'rsa'
@@ -34,6 +44,8 @@ class Diasub:
         self.debugging = DEBUGGING
         self.allcodec = {'ISO-8859':'iso-8859-1','UTF-8':'utf-8'}
         self.operator = {'+':operator.add, '-':operator.sub}
+        self.pattern = {'vtttime':'^(\d\d:\d\d:\d\d.\d\d\d\s*-->\s*\d\d:\d\d:\d\d.\d\d\d)'}
+        self.pattern['time'] = '(<\s*\d\d:\d\d:\d\d.\d\d\d\s*>)'
         self.scriptinfo = """[Script Info]
         ; Script by Diasub
         ScriptType: v4.00+
@@ -48,7 +60,48 @@ class Diasub:
         self.predialogue = 'Dialogue: 0,'
         self.postdialogue = ',Default,,0,0,0,,'
 
-    def srt(self):
+    def vtt_srt(self):
+        self.debug()
+        if self.argc < 3: self.usage(self.args[1])
+        if self.argc >= 3: sourcefile = self.args[2]
+        content = []
+        index = 0
+        with open(sourcefile,'rb') as fh:
+            self.fsource = fh.read()
+        self.fsource = self.fsource.replace(b'\r',b'').decode(\
+        self.codec(infile=sourcefile))
+        self.fsource = re.split('\n\s*\n\s*\n',self.fsource)
+        for record in self.fsource:
+            self.vtt_srt_record(record=record,content=content,index=index)
+            index += 1
+        print(''.join(content))
+
+    def vtt_srt_record(self,record='',content='',index=0):
+        vtttime = 0;
+        text = 0
+        caption = ''
+        for line in record.split('\n'):
+            if vtttime == 0:
+                match = re.search(self.pattern['vtttime'],line)
+                if not match:continue
+                content.append('\n' + str(index + 1) + '\n' 
+                + match.group(1).replace('.',','))
+                vtttime = 1
+                continue
+            if re.search(self.pattern['time'],line):continue
+            if re.search(self.pattern['vtttime'],line):
+                text = 1
+                continue
+            if text == 1:
+               caption += '\n' + line + '\n'
+
+        if not caption:
+            msg='missing caption content at vtttime:' + content[index].replace(',','.')
+            print(msg,file=sys.stderr)
+            exit(1)
+        content[index] += caption
+
+    def ass_srt(self):
         self.debug()
         if self.argc < 3: self.usage(self.args[1])
         if self.argc >= 3: sourcefile = self.args[2]
@@ -67,7 +120,7 @@ class Diasub:
             print(''.join(content[9:]))
             print()
      
-    def ass(self):
+    def srt_ass(self):
         self.debug()
         if self.argc < 3: self.usage(self.args[1])
         if self.argc >= 3: sourcefile = self.args[2]

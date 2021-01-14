@@ -43,12 +43,12 @@ diasub.reconfig()
 diasub.pretranslate()
 {
     diasub.py.install 1
-    $diasub -o misc/source misc/dictionary
+    $diasub --srt-pre-translate misc/source misc/dictionary
 }
 diasub.posttranslate()
 {
     diasub.py.install 1
-    $diasub -i misc/source misc/dictionary misc/target
+    $diasub --srt-post-translate misc/source misc/dictionary misc/target
 }
 diasub.py.install()
 {
